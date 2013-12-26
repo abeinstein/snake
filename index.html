@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/main.css">
+        <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.2.min.js"><\/script>')</script>
+        <script src="js/plugins.js"></script>
+        <script src="js/main.js"></script>
+        <style>
+            #canvas {
+                border: 1px blue solid;
+            }
+
+        </style>
+
+        <script>
+            $(document).ready(function(){
+                //Canvas stuff
+                var canvas = $("#canvas")[0];
+                var context = canvas.getContext("2d");
+                var w = $(canvas).width();
+                var h = $(canvas).height();
+                var cell_w = 10;
+                var cell_h = 10;
+                var step = 10;
+                var front_x, front_y, prize_x, prize_y;
+                var cur_dir;
+                var snake;
+                var score = 0;
+
+                // Starts a new game
+                function init() {
+                    front_x = 50;
+                    front_y = 10;
+                    cur_dir = "right";
+
+                    $("#score").text("Score: " + score);
+
+                    snake = [[front_x,front_y],
+                        [front_x - cell_w, front_y],
+                        [front_x - 2*cell_w, front_y],
+                        [front_x - 3*cell_w, front_y]];
+
+                    draw_snake();
+                    new_prize();
+                }
+
+                // Draws a snake to canvas
+                function draw_snake() {
+                    for (var i = 0; i < snake.length; i++) {
+                        var x = snake[i][0];
+                        var y = snake[i][1];
+                        context.fillRect(x, y, cell_w, cell_h);
+                        context.strokeStyle = "white";
+                        context.strokeRect(x, y, cell_w, cell_h);
+                    }
+                }
+
+                // Puts a new prize on the map
+                function new_prize() {
+                    prize_x = Math.floor((Math.random()*(w / cell_w))) * cell_w;
+                    prize_y = Math.floor((Math.random()*(h / cell_h))) * cell_h;
+                    context.fillStyle = "red";
+                    context.fillRect(prize_x, prize_y, cell_w, cell_h);
+                }
+
+
+                // Simulates one frame of the game
+                function play() {
+                    canvas.width = canvas.width; // Clears the canvas
+                    switch (cur_dir) {
+                        case "right":
+                            front_x = front_x + step; //Math.min(front_x + step, w - cell_w);
+                            break;
+                        case "left":
+                            front_x = front_x - step;//Math.max(front_x - step, 0);
+                            break;
+                        case "up":
+                            front_y = front_y - step; //Math.max(front_y - step, 0);
+                            break;
+                        case "down":
+                            front_y = front_y + step; //Math.min(front_y + step, h - cell_h);
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (check_game_over()) {
+                        game_over();
+                    }
+
+                    snake.unshift([front_x, front_y]);
+                    draw_snake();
+
+                    context.fillStyle = "red";
+                    context.fillRect(prize_x, prize_y, cell_w, cell_h);
+
+                    if (Math.abs(front_x - prize_x) <= 5 && Math.abs(front_y - prize_y) <= 5) {
+                        new_prize();
+                        $("#score").text("Score: " + score++);
+                    } else {
+                        snake.pop();
+                    }
+
+
+                }
+
+                // Checks if the game is over
+                function check_game_over() {
+                    for (var i = 0; i < snake.length; i++) {
+                        var cell = snake[i];
+                        if (cell[0] < 0 || cell[1] < 0
+                           || cell[0] > w - cell_w || cell[1] > h - cell_h
+                           || intersections()) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                // Contains game over actions
+                function game_over() {
+                    context.fillText("GAME OVER", 200, 230);
+                    context.fillText("Press space to play again", 200, 250);
+                    clearInterval(window.interval);
+
+                    $(document).keydown(function(e) {
+                        if (e.which == 32) {
+                            score = 0;
+                            init();
+                            clearInterval(window.interval);
+                            window.interval = setInterval(play, 40);
+
+                        }
+                    })
+
+                }
+
+                // Checks to see if the snake crosses over itself
+                function intersections() {
+                    for (var i = 0; i < snake.length; i++) {
+                        for (var j = i + 1; j < snake.length; j++) {
+                            if (snake[i][0] == snake[j][0] && snake[i][1] == snake[j][1]) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                // Utility function to reverse a snake
+                function reverse() {
+                    front_x = snake[snake.length-1][0];
+                    front_y = snake[snake.length-1][1];
+                    snake.reverse();
+                }
+
+                // Controls the snakes' movement
+                $(document).keydown(function(e) {
+                    if (e.which == 38) {
+                        if (cur_dir == "down") {
+                            reverse();
+                        }
+                        cur_dir = "up";
+                    } else if (e.which == 40) {
+                        if (cur_dir == "up") {
+                            reverse();
+                        }
+                        cur_dir = "down";
+                    } else if (e.which == 37) {
+                        if (cur_dir == "right") {
+                            reverse();
+                        }
+                        cur_dir = "left";
+                    } else if (e.which == 39) {
+                        if (cur_dir == "left") {
+                            reverse();
+                        }
+                        cur_dir = "right";
+                    }
+                });
+
+                init();
+                window.interval = setInterval(play, 40);
+
+
+            })
+
+        </script>
+        <h1>Snake!</h1>
+        <canvas id="canvas" width="500" height="500">
+
+        </canvas>
+        <p id="score"></p>
+
+
+        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
+        <script>
+            (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+            function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+            e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+            e.src='//www.google-analytics.com/analytics.js';
+            r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+            ga('create','UA-XXXXX-X');ga('send','pageview');
+        </script>
+    </body>
+</html>
